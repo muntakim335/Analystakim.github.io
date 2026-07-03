@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paper Trading Bot — Dashboard</title>
+<style>
+  :root {
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-bot: #2a78d6;
+    --series-spy: #1baf7a;
+    --good: #006300;
+    --bad: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --surface-1: #1a1a19;
+      --page: #0d0d0d;
+      --text-primary: #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --series-bot: #3987e5;
+      --series-spy: #199e70;
+      --good: #0ca30c;
+      --bad: #e66767;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page); color: var(--text-primary);
+    padding: 24px 16px 48px;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 1.35rem; margin-bottom: 4px; }
+  .sub { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px; }
+  .sub a { color: inherit; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .tile {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .tile .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tile .value { font-size: 1.45rem; font-weight: 600; margin-top: 4px; }
+  .tile .note { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+  .up { color: var(--good); } .down { color: var(--bad); }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 0.95rem; margin-bottom: 2px; }
+  .card .desc { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px; }
+  .legend { display: flex; gap: 16px; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; }
+  .legend .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: baseline; }
+  .chartbox { position: relative; }
+  svg { display: block; width: 100%; height: auto; }
+  .tooltip {
+    position: absolute; pointer-events: none; display: none;
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 10px; font-size: 0.78rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15); white-space: nowrap; z-index: 2;
+  }
+  .tooltip .t-date { color: var(--muted); margin-bottom: 3px; }
+  .tooltip .row { display: flex; align-items: center; gap: 6px; }
+  .tooltip .num { font-variant-numeric: tabular-nums; margin-left: auto; padding-left: 12px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+  th, td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 500; }
+  .empty { color: var(--text-secondary); font-size: 0.9rem; padding: 32px 8px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Paper Trading Bot</h1>
+  <p class="sub">Fully automated momentum ETF rotation on an Alpaca <strong>paper-money</strong> account.
+     Goal: beat SPY by ≥3 pp over 12 months with max drawdown &lt;15%.
+     Daily plans &amp; reports live in <a href="https://github.com/muntakim335/Analystakim.github.io/tree/main/tradingbot/journal">the journal</a>.</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2>Growth of the portfolio vs SPY</h2>
+    <p class="desc">Both indexed to 100 at the bot's first trading day.</p>
+    <div class="legend" id="legend"></div>
+    <div class="chartbox" id="chartbox">
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Recent daily history</h2>
+    <p class="desc">Last 15 trading days, most recent first.</p>
+    <div class="tablewrap" id="tablewrap"></div>
+  </div>
+</div>
+
+<script>
+(async function () {
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const fmt$ = x => "$" + x.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const fmtPct = x => (x >= 0 ? "+" : "") + x.toFixed(2) + "%";
+
+  let state = null;
+  try {
+    const res = await fetch("../tradingbot/state/performance.json", {cache: "no-store"});
+    if (res.ok) state = await res.json();
+  } catch (e) { /* fall through to empty state */ }
+
+  const tiles = document.getElementById("tiles");
+  const chartbox = document.getElementById("chartbox");
+  const tablewrap = document.getElementById("tablewrap");
+
+  if (!state || !state.history || state.history.length === 0) {
+    tiles.innerHTML = "";
+    chartbox.innerHTML = '<div class="empty">No trading history yet. The dashboard fills in automatically after the bot’s first close-of-day report.</div>';
+    tablewrap.innerHTML = '<div class="empty">Awaiting first trading day.</div>';
+    return;
+  }
+
+  const h = state.history;
+  const last = h[h.length - 1];
+  const startEq = state.starting_equity;
+  const botRet = (last.equity / startEq - 1) * 100;
+  const spyRet = (last.spy_close / h[0].spy_close - 1) * 100;
+  const alpha = botRet - spyRet;
+  const dd = Math.max(0, (state.peak_equity - last.equity) / state.peak_equity * 100);
+
+  function tile(label, value, cls, note) {
+    return '<div class="tile"><div class="label">' + label + '</div>' +
+      '<div class="value' + (cls ? " " + cls : "") + '">' + value + '</div>' +
+      (note ? '<div class="note">' + note + '</div>' : '') + '</div>';
+  }
+  tiles.innerHTML =
+    tile("Equity", fmt$(last.equity), "", "as of " + last.date) +
+    tile("Total return", fmtPct(botRet), botRet >= 0 ? "up" : "down", "since " + state.start_date) +
+    tile("vs SPY", fmtPct(alpha).replace("%", " pp"), alpha >= 0 ? "up" : "down", "goal: +3 pp / 12 mo") +
+    tile("Drawdown", dd.toFixed(2) + "%", dd >= 10 ? "down" : "", "limit 15%") +
+    tile("Status", state.halted ? "HALTED" : "Active", state.halted ? "down" : "up",
+         state.halted ? "circuit breaker" : h.length + " trading days");
+
+  // ---- line chart: bot vs SPY, indexed to 100 ----
+  const botIdx = h.map(d => d.equity / h[0].equity * 100);
+  const spyIdx = h.map(d => d.spy_close / h[0].spy_close * 100);
+  const dates = h.map(d => d.date);
+
+  const W = 920, H = 340, m = {t: 16, r: 56, b: 28, l: 44};
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const all = botIdx.concat(spyIdx);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const pad = Math.max((hi - lo) * 0.08, 0.5); lo -= pad; hi += pad;
+  const X = i => m.l + (h.length === 1 ? iw / 2 : i / (h.length - 1) * iw);
+  const Y = v => m.t + (1 - (v - lo) / (hi - lo)) * ih;
+  const path = arr => arr.map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(" ");
+
+  const cBot = css("--series-bot"), cSpy = css("--series-spy");
+  let grid = "", yticks = "";
+  const nt = 4;
+  for (let i = 0; i <= nt; i++) {
+    const v = lo + (hi - lo) * i / nt, y = Y(v);
+    grid += '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + y + '" y2="' + y + '" stroke="var(--grid)" stroke-width="1"/>';
+    yticks += '<text x="' + (m.l - 8) + '" y="' + (y + 3.5) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + v.toFixed(1) + '</text>';
+  }
+  let xticks = "";
+  const step = Math.max(1, Math.floor(h.length / 6));
+  for (let i = 0; i < h.length; i += step) {
+    xticks += '<text x="' + X(i) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + dates[i].slice(5) + '</text>';
+  }
+  const endLbl = (arr, color, name) =>
+    '<text x="' + (W - m.r + 6) + '" y="' + (Y(arr[arr.length - 1]) + 4) + '" font-size="12" font-weight="600" fill="' + color + '">' + name + '</text>';
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Line chart of bot portfolio vs SPY, indexed to 100");
+  svg.innerHTML =
+    grid + yticks + xticks +
+    '<line x1="' + m.l + '" x2="' + (W - m.r) + '" y1="' + (m.t + ih) + '" y2="' + (m.t + ih) + '" stroke="var(--baseline)" stroke-width="1"/>' +
+    '<path d="' + path(spyIdx) + '" fill="none" stroke="' + cSpy + '" stroke-width="2" stroke-linejoin="round"/>' +
+    '<path d="' + path(botIdx) + '" fill="none" stroke="' + cBot + '" stroke-width="2" stroke-linejoin="round"/>' +
+    endLbl(spyIdx, cSpy, "SPY") + endLbl(botIdx, cBot, "Bot") +
+    '<line id="xh" x1="0" x2="0" y1="' + m.t + '" y2="' + (m.t + ih) + '" stroke="var(--baseline)" stroke-width="1" style="display:none"/>' +
+    '<circle id="dotB" r="4" fill="' + cBot + '" stroke="var(--surface-1)" stroke-width="2" style="display:none"/>' +
+    '<circle id="dotS" r="4" fill="' + cSpy + '" stroke="var(--surface-1)" stroke-width="2" style="display:none"/>' +
+    '<rect id="hit" x="' + m.l + '" y="' + m.t + '" width="' + iw + '" height="' + ih + '" fill="transparent"/>';
+  chartbox.appendChild(svg);
+
+  document.getElementById("legend").innerHTML =
+    '<span><span class="swatch" style="background:' + cBot + '"></span>Bot portfolio</span>' +
+    '<span><span class="swatch" style="background:' + cSpy + '"></span>SPY benchmark</span>';
+
+  const tip = document.getElementById("tooltip");
+  const xh = svg.querySelector("#xh"), dotB = svg.querySelector("#dotB"), dotS = svg.querySelector("#dotS");
+  svg.querySelector("#hit").addEventListener("mousemove", ev => {
+    const r = svg.getBoundingClientRect();
+    const sx = (ev.clientX - r.left) / r.width * W;
+    let i = Math.round((sx - m.l) / (iw || 1) * (h.length - 1));
+    i = Math.max(0, Math.min(h.length - 1, i));
+    const x = X(i);
+    xh.setAttribute("x1", x); xh.setAttribute("x2", x); xh.style.display = "";
+    dotB.setAttribute("cx", x); dotB.setAttribute("cy", Y(botIdx[i])); dotB.style.display = "";
+    dotS.setAttribute("cx", x); dotS.setAttribute("cy", Y(spyIdx[i])); dotS.style.display = "";
+    tip.innerHTML = '<div class="t-date">' + dates[i] + '</div>' +
+      '<div class="row"><span class="swatch" style="background:' + cBot + ';width:8px;height:8px;border-radius:2px;display:inline-block"></span>Bot <span class="num">' + botIdx[i].toFixed(2) + ' · ' + fmt$(h[i].equity) + '</span></div>' +
+      '<div class="row"><span class="swatch" style="background:' + cSpy + ';width:8px;height:8px;border-radius:2px;display:inline-block"></span>SPY <span class="num">' + spyIdx[i].toFixed(2) + '</span></div>';
+    tip.style.display = "block";
+    const bx = chartbox.getBoundingClientRect();
+    const px = (x / W) * bx.width;
+    tip.style.left = Math.min(px + 14, bx.width - tip.offsetWidth - 4) + "px";
+    tip.style.top = "10px";
+  });
+  svg.querySelector("#hit").addEventListener("mouseleave", () => {
+    tip.style.display = "none"; xh.style.display = "none";
+    dotB.style.display = "none"; dotS.style.display = "none";
+  });
+
+  // ---- table ----
+  const rows = h.slice(-15).reverse().map(d =>
+    "<tr><td>" + d.date + "</td><td>" + fmt$(d.equity) + "</td><td>" + fmt$(d.cash) + "</td><td>" +
+    (Object.keys(d.positions || {}).join(", ") || "cash") + "</td><td>" + d.spy_close.toFixed(2) + "</td></tr>"
+  ).join("");
+  tablewrap.innerHTML = "<table><thead><tr><th>Date</th><th>Equity</th><th>Cash</th><th>Holdings</th><th>SPY close</th></tr></thead><tbody>" + rows + "</tbody></table>";
+})();
+</script>
+</body>
+</html>

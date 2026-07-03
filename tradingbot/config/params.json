@@ -1,0 +1,10 @@
+{
+  "universe": ["SPY", "QQQ", "IWM", "EFA", "EEM", "GLD", "TLT", "XLE", "XLV", "XLF"],
+  "top_n": 3,
+  "momentum_weights": {"21": 0.3, "63": 0.5, "126": 0.2},
+  "trend_filter_sma": 100,
+  "cash_buffer_pct": 5.0,
+  "rebalance_threshold_pct": 5.0,
+  "max_position_pct": 35.0,
+  "max_drawdown_pct": 15.0
+}
