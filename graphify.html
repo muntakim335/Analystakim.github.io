@@ -1,0 +1,235 @@
+<!DOCTYPE HTML>
+<!--
+	Massively by HTML5 UP
+	html5up.net | @ajlkn
+	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
+-->
+<html>
+	<head>
+		<title>Graphify - Muntakim choksi portfilio</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+		<noscript><link rel="stylesheet" href="assets/css/noscript.css" /></noscript>
+		<style>
+			/* Graphify dashboard — self-contained, no chart library */
+			.viz-root {
+				--surface-1: #ffffff;      /* chart surface = #main background */
+				--text-primary: #0b0b0b;
+				--text-secondary: #52514e;
+				--text-muted: #898781;
+				--gridline: #e1e0d9;
+				--baseline: #c3c2b7;
+				--border: rgba(11, 11, 11, 0.10);
+				--series-1: #2a78d6;       /* blue  — 2022 */
+				--series-2: #1baf7a;       /* aqua  — 2021 */
+				--delta-good: #006300;
+				font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+				color: var(--text-primary);
+			}
+			.viz-root h5 { font-family: inherit; letter-spacing: 0.08rem; }
+			.stat-row {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+				gap: 1rem;
+				margin: 0 0 2rem 0;
+			}
+			.stat-tile {
+				border: 1px solid var(--border);
+				border-radius: 6px;
+				padding: 0.9rem 1.1rem;
+				background: var(--surface-1);
+			}
+			.stat-tile .stat-label {
+				display: block;
+				font-size: 0.75rem;
+				color: var(--text-secondary);
+				margin-bottom: 0.25rem;
+			}
+			.stat-tile .stat-value {
+				display: block;
+				font-size: 1.6rem;
+				font-weight: 600;
+				line-height: 1.2;
+				color: var(--text-primary);
+			}
+			.stat-tile .stat-delta {
+				display: block;
+				font-size: 0.75rem;
+				margin-top: 0.25rem;
+				color: var(--delta-good);
+			}
+			.chart-card {
+				border: 1px solid var(--border);
+				border-radius: 6px;
+				padding: 1.25rem 1.25rem 0.75rem 1.25rem;
+				margin: 0 0 2rem 0;
+				background: var(--surface-1);
+			}
+			.chart-card h5 { margin: 0 0 0.2rem 0; text-transform: none; font-size: 1rem; }
+			.chart-card .chart-sub { font-size: 0.8rem; color: var(--text-secondary); margin: 0 0 0.75rem 0; }
+			.chart-legend {
+				display: flex;
+				gap: 1.25rem;
+				font-size: 0.8rem;
+				color: var(--text-secondary);
+				margin: 0 0 0.5rem 0;
+			}
+			.chart-legend .key {
+				display: inline-block;
+				width: 18px;
+				height: 0;
+				border-top: 2px solid;
+				vertical-align: middle;
+				margin-right: 0.4rem;
+			}
+			.chart-wrap { position: relative; }
+			.chart-wrap svg { display: block; width: 100%; height: auto; }
+			.chart-wrap svg:focus { outline: 2px solid var(--series-1); outline-offset: 2px; }
+			.viz-tooltip {
+				position: absolute;
+				pointer-events: none;
+				background: var(--surface-1);
+				border: 1px solid var(--border);
+				border-radius: 6px;
+				box-shadow: 0 2px 8px rgba(11, 11, 11, 0.12);
+				padding: 0.5rem 0.7rem;
+				font-size: 0.78rem;
+				line-height: 1.5;
+				white-space: nowrap;
+				display: none;
+				z-index: 5;
+			}
+			.viz-tooltip .tt-title { color: var(--text-secondary); display: block; margin-bottom: 0.1rem; }
+			.viz-tooltip .tt-row { display: flex; align-items: center; gap: 0.45rem; }
+			.viz-tooltip .tt-key { width: 14px; height: 0; border-top: 2px solid; flex: none; }
+			.viz-tooltip .tt-value { font-weight: 600; color: var(--text-primary); }
+			.viz-tooltip .tt-series { color: var(--text-secondary); }
+			.viz-table { margin: 0 0 0.5rem 0; }
+			.viz-table summary {
+				cursor: pointer;
+				font-size: 0.8rem;
+				color: var(--text-secondary);
+				padding: 0.4rem 0;
+			}
+			.viz-table table { font-size: 0.8rem; margin: 0.5rem 0 0.5rem 0; }
+			.viz-table td, .viz-table th { padding: 0.3rem 0.75rem; font-variant-numeric: tabular-nums; }
+			.viz-note { font-size: 0.8rem; color: var(--text-muted); }
+		</style>
+	</head>
+	<body class="is-preload">
+
+		<!-- Wrapper -->
+			<div id="wrapper" class="fade-in">
+
+				<!-- Header -->
+					<header id="header">
+						<a href="index.html" class="logo">Takim</a>
+					</header>
+
+				<!-- Nav -->
+					<nav id="nav">
+						<ul class="links">
+							<li><a href="index.html">home</a></li>
+							<li><a href="aboutme.html">About me</a></li>
+							<li class="active"><a href="graphify.html">Graphify</a></li>
+						</ul>
+
+						<ul class="icons">
+							<li><a href="https://www.linkedin.com/search/results/all/?keywords=muntakim%20choksi&origin=RICH_QUERY_SUGGESTION&position=0&searchId=6d984a61-a12c-4e65-a8a4-f7b858018cac&sid=8_M" class="icon brands fa-linkedin"><span class="label">linked-in</span></a></li>
+							<li><a href="https://github.com/muntakim335" class="icon brands fa-github"><span class="label">GitHub</span></a></li>
+							<li><a href="https://ne-np.facebook.com/muntakim.choksi" class="icon brands fa-facebook-f"><span class="label">Facebook</span></a></li>
+							<li><a href="https://www.instagram.com/muntakim_choksi/?hl=en" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
+						</ul>
+					</nav>
+
+				<!-- Main -->
+					<div id="main">
+
+						<!-- Post -->
+							<section class="post">
+								<header class="major">
+									<h2>Graphify</h2>
+									<p>An interactive sales dashboard built from scratch with plain JavaScript and SVG &mdash; no chart library. Hover or use arrow keys to explore. Sample data based on my bike sales analysis project.</p>
+								</header>
+
+								<div class="viz-root">
+
+									<!-- Stat tiles -->
+									<div class="stat-row" id="stat-row"></div>
+
+									<!-- Line chart: monthly revenue -->
+									<div class="chart-card">
+										<h5>Monthly revenue, 2021 vs 2022</h5>
+										<p class="chart-sub">Bike sales revenue by month, &pound; thousands</p>
+										<div class="chart-legend" id="line-legend"></div>
+										<div class="chart-wrap" id="line-chart"></div>
+										<details class="viz-table" id="line-table">
+											<summary>View data table</summary>
+										</details>
+									</div>
+
+									<!-- Column chart: revenue by region -->
+									<div class="chart-card">
+										<h5>Revenue by region, 2022</h5>
+										<p class="chart-sub">Full-year bike sales revenue, &pound; thousands</p>
+										<div class="chart-wrap" id="bar-chart"></div>
+										<details class="viz-table" id="bar-table">
+											<summary>View data table</summary>
+										</details>
+									</div>
+
+									<p class="viz-note">Sample dataset. The full analysis lives in my <a href="https://github.com/muntakim335/Bike-sales-excel">bike sales project</a> on GitHub.</p>
+									<noscript><p class="viz-note">This dashboard needs JavaScript to render its charts.</p></noscript>
+								</div>
+							</section>
+
+					</div>
+
+				<!-- Footer -->
+					<footer id="footer">
+						<section class="split contact">
+							<section class="alt">
+								<h3>Address</h3>
+								<p>91,pembroke road,seven kings,ilford<br />
+								london,IG38PQ</p>
+							</section>
+							<section>
+								<h3>Phone</h3>
+								<p><a href="#">(0)7453654946</a></p>
+							</section>
+							<section>
+								<h3>Email</h3>
+								<p><a href="#">muntakim30@gmail.com</a></p>
+							</section>
+							<section>
+								<h3>Social</h3>
+								<ul class="icons alt">
+									<li><a href="https://github.com/muntakim335" class="icon brands alt fa-github"><span class="label">GitHub</span></a></li>
+									<li><a href="https://www.linkedin.com/search/results/all/?keywords=muntakim%20choksi&origin=RICH_QUERY_SUGGESTION&position=0&searchId=6d984a61-a12c-4e65-a8a4-f7b858018cac&sid=8_M" class="icon brands alt fa-linkedin"><span class="label">linkedin</span></a></li>
+									<li><a href="https://ne-np.facebook.com/muntakim.choksi" class="icon brands alt fa-facebook-f"><span class="label">Facebook</span></a></li>
+									<li><a href="https://www.instagram.com/muntakim_choksi/?hl=en" class="icon brands alt fa-instagram"><span class="label">Instagram</span></a></li>
+								</ul>
+							</section>
+						</section>
+					</footer>
+
+				<!-- Copyright -->
+					<div id="copyright">
+						<ul><li>&copy; copyright</li><li>Designed by muntakim </li></ul>
+					</div>
+
+			</div>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/jquery.scrollex.min.js"></script>
+			<script src="assets/js/jquery.scrolly.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+			<script src="assets/js/graphify.js"></script>
+
+	</body>
+</html>
