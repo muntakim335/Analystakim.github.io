@@ -32,27 +32,35 @@ function Section({ title, children, action }: { title: string; children: React.R
 
 export function Dashboard() {
   const { user } = useAuth();
-  const overview = useQuery({ queryKey: ['overview'], queryFn: () => get<Overview>('/reports/overview') });
+  // The dashboard is a snapshot page: always refetch on mount so numbers are
+  // current when the user navigates back (cached data still paints instantly).
+  const fresh = { staleTime: 0, refetchOnMount: 'always' } as const;
+  const overview = useQuery({ queryKey: ['overview'], queryFn: () => get<Overview>('/reports/overview'), ...fresh });
   const pipeline = useQuery({
     queryKey: ['report-pipeline'],
     queryFn: () => get<{ stages: { name: string; count: number; value: number }[] }>('/reports/pipeline'),
+    ...fresh,
   });
   const revenue = useQuery({
     queryKey: ['report-revenue'],
     queryFn: () => get<{ data: { month: string; value: number }[] }>('/reports/revenue?months=12'),
+    ...fresh,
   });
   const sources = useQuery({
     queryKey: ['report-sources'],
     queryFn: () => get<{ data: { source: string; total: number; conversionRate: number }[] }>('/reports/lead-sources'),
+    ...fresh,
   });
   const myTasks = useQuery({
     queryKey: ['my-tasks', user?.id],
     queryFn: () => get<{ data: Task[] }>(`/tasks?assignee_id=${user!.id}&status=open&sort=due_date&order=asc&limit=6`),
     enabled: !!user,
+    ...fresh,
   });
   const feed = useQuery({
     queryKey: ['feed'],
     queryFn: () => get<{ data: Activity[] }>('/activities?limit=8'),
+    ...fresh,
   });
 
   if (overview.isLoading) return <Spinner />;
