@@ -10,10 +10,19 @@ $Home2  = Join-Path $env:USERPROFILE 'NimbusCRM'
 
 Write-Host "`n=== NimbusCRM setup ===" -ForegroundColor Cyan
 
-# 1. Docker must be up
-try { docker info *> $null } catch {
-  Write-Host 'Docker Desktop is not running. Start it (whale icon = running), then re-run this script.' -ForegroundColor Red
-  exit 1
+# 1. Docker must be up (never `exit` here — under `iex` that would close the user's window)
+$dockerOk = $false
+try {
+  docker info *> $null
+  if ($LASTEXITCODE -eq 0) { $dockerOk = $true }
+} catch { }
+if (-not $dockerOk) {
+  Write-Host ''
+  Write-Host 'Docker Desktop is not running (or not installed).' -ForegroundColor Red
+  Write-Host 'Open Docker Desktop from the Start menu, wait for the whale icon to say "running",' -ForegroundColor Yellow
+  Write-Host 'then paste the same command again.' -ForegroundColor Yellow
+  Write-Host 'No Docker Desktop yet? Get it from https://www.docker.com/products/docker-desktop/' -ForegroundColor Yellow
+  return
 }
 Write-Host '[1/5] Docker is running'
 
