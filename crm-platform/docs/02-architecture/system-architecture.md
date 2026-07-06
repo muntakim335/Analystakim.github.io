@@ -40,14 +40,14 @@ flowchart LR
 
 ### Request path & layering
 
-Every module follows the same three layers; nothing skips a layer:
+Every module (one file per domain in `src/modules/`) keeps the same three layers internally; nothing skips a layer:
 
 ```
-routes.ts        HTTP concerns: parse/validate (zod), authn/authz guards, status codes
+route handlers   HTTP concerns: parse/validate (zod), authn/authz guards, status codes
    ↓
-service.ts       business rules: transactions, cross-module calls, events, audit entries
+domain logic     business rules: transactions, cross-module events, audit entries
    ↓
-repo.ts          SQL only: parameterized queries, always org-scoped (org_id in every WHERE)
+SQL              parameterized queries only, always org-scoped (org_id in every WHERE)
 ```
 
 Cross-cutting concerns are Fastify plugins: auth (JWT verify → `request.user`), error handling (typed AppError → HTTP), rate limiting, security headers, request logging with request IDs.

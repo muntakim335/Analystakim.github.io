@@ -1,0 +1,66 @@
+# NimbusCRM — single-host production stack.
+#   cp .env.example .env   (set real secrets!)
+#   docker compose up -d
+# Web UI on :8080. Put a TLS proxy (Caddy/Traefik/nginx + certbot) in front —
+# see docs/04-operations/deployment.md.
+
+name: nimbuscrm
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: crm
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U crm -d crm']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ../apps/api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://crm:${POSTGRES_PASSWORD}@postgres:5432/crm
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?set in .env}
+      CORS_ORIGIN: ${PUBLIC_ORIGIN:-*}
+      SMTP_URL: ${SMTP_URL:-}
+      SMTP_FROM: ${SMTP_FROM:-NimbusCRM <no-reply@localhost>}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+    volumes:
+      - uploads:/data/uploads
+
+  web:
+    build: ../apps/web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '${WEB_PORT:-8080}:80'
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
