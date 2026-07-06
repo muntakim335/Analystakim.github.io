@@ -10,12 +10,17 @@ $Home2  = Join-Path $env:USERPROFILE 'NimbusCRM'
 
 Write-Host "`n=== NimbusCRM setup ===" -ForegroundColor Cyan
 
-# 1. Docker must be up (never `exit` here — under `iex` that would close the user's window)
+# 1. Docker must be up (never `exit` here — under `iex` that would close the user's window).
+# Detect via `docker version` server line; relax ErrorAction so docker's stderr
+# warnings can't be turned into a false "not running" by the script's Stop mode.
 $dockerOk = $false
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 try {
-  docker info *> $null
-  if ($LASTEXITCODE -eq 0) { $dockerOk = $true }
+  $srv = & docker version --format '{{.Server.Version}}' 2>$null
+  if ($LASTEXITCODE -eq 0 -and "$srv".Trim()) { $dockerOk = $true }
 } catch { }
+$ErrorActionPreference = $prevEAP
 if (-not $dockerOk) {
   Write-Host ''
   Write-Host 'Docker Desktop is not running (or not installed).' -ForegroundColor Red
@@ -56,11 +61,21 @@ if (-not (Test-Path $envFile)) {
   Write-Host '[3/5] Keeping existing secrets (.env already present)'
 }
 
-# 4. Build & start
+# 4. Build & start (Docker prints build progress to stderr; don't let Stop mode abort on it)
 Write-Host '[4/5] Building and starting containers (first run takes a few minutes)…'
 Push-Location (Join-Path $Home2 'deploy')
+$prevEAP = $ErrorActionPreference
+$ErrorActionPreference = 'Continue'
 docker compose up -d --build
+$composeExit = $LASTEXITCODE
+$ErrorActionPreference = $prevEAP
 Pop-Location
+if ($composeExit -ne 0) {
+  Write-Host ''
+  Write-Host "docker compose failed (exit $composeExit). See the output above, or run:" -ForegroundColor Red
+  Write-Host "  cd $Home2\deploy; docker compose logs" -ForegroundColor Yellow
+  return
+}
 
 # 5. Wait until healthy
 Write-Host '[5/5] Waiting for the app to come up…'
